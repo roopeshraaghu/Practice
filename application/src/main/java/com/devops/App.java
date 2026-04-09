@@ -3,8 +3,6 @@ package com.devops;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -13,11 +11,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class App {
-    private static final Logger logger = Logger.getLogger(App.class.getName());
-    private static final Gson gson = new Gson();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static void main(String[] args) throws IOException {
@@ -26,23 +21,14 @@ public class App {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        // Health check endpoint
         server.createContext("/health", new HealthHandler());
-
-        // Main endpoint
         server.createContext("/", new RootHandler(appName));
-
-        // Info endpoint
         server.createContext("/info", new InfoHandler());
-
-        // Metrics endpoint
-        server.createContext("/metrics", new MetricsHandler());
 
         server.setExecutor(null);
         server.start();
 
-        logger.info(String.format("%s started on port %d", appName, port));
-        logger.info("Available endpoints: /, /health, /info, /metrics");
+        System.out.println(String.format("%s started on port %d", appName, port));
     }
 
     static class RootHandler implements HttpHandler {
@@ -55,13 +41,7 @@ public class App {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String response = String.format(
-                    "{\n" +
-                            "  \"message\": \"Hello from DevOps Pipeline!\",\n" +
-                            "  \"appName\": \"%s\",\n" +
-                            "  \"status\": \"running\",\n" +
-                            "  \"timestamp\": \"%s\",\n" +
-                            "  \"version\": \"1.0.0\"\n" +
-                            "}",
+                    "{\"message\": \"Hello from DevOps Pipeline!\", \"appName\": \"%s\", \"status\": \"running\", \"timestamp\": \"%s\"}",
                     appName,
                     LocalDateTime.now().format(formatter)
             );
@@ -71,18 +51,17 @@ public class App {
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(response.getBytes());
             }
-            logger.info("Root endpoint accessed");
         }
     }
 
     static class HealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            JsonObject health = new JsonObject();
-            health.addProperty("status", "healthy");
-            health.addProperty("timestamp", LocalDateTime.now().format(formatter));
+            String response = String.format(
+                    "{\"status\": \"healthy\", \"timestamp\": \"%s\"}",
+                    LocalDateTime.now().format(formatter)
+            );
 
-            String response = gson.toJson(health);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -94,36 +73,23 @@ public class App {
     static class InfoHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            Map<String, Object> info = new HashMap<>();
+            Map<String, String> info = new HashMap<>();
             info.put("javaVersion", System.getProperty("java.version"));
             info.put("osName", System.getProperty("os.name"));
-            info.put("osArch", System.getProperty("os.arch"));
-            info.put("availableProcessors", Runtime.getRuntime().availableProcessors());
-            info.put("environment", System.getenv().getOrDefault("APP_ENV", "development"));
+            info.put("availableProcessors", String.valueOf(Runtime.getRuntime().availableProcessors()));
 
-            String response = gson.toJson(info);
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, response.getBytes().length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(response.getBytes());
+            StringBuilder json = new StringBuilder("{");
+            int count = 0;
+            for (Map.Entry<String, String> entry : info.entrySet()) {
+                if (count++ > 0) json.append(",");
+                json.append("\"").append(entry.getKey()).append("\":\"").append(entry.getValue()).append("\"");
             }
-        }
-    }
+            json.append("}");
 
-    static class MetricsHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            Map<String, Object> metrics = new HashMap<>();
-            metrics.put("freeMemory", Runtime.getRuntime().freeMemory());
-            metrics.put("totalMemory", Runtime.getRuntime().totalMemory());
-            metrics.put("maxMemory", Runtime.getRuntime().maxMemory());
-            metrics.put("availableProcessors", Runtime.getRuntime().availableProcessors());
-
-            String response = gson.toJson(metrics);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, response.getBytes().length);
+            exchange.sendResponseHeaders(200, json.toString().getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
-                os.write(response.getBytes());
+                os.write(json.toString().getBytes());
             }
         }
     }
