@@ -1,0 +1,107 @@
+# Default values for simple-java-app
+replicaCount: 2
+
+image:
+  repository: YOUR_ECR_REPOSITORY_URL
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Environment configuration
+environment: development
+appName: "Simple Java DevOps App"
+appPort: 8080
+
+# Service configuration
+service:
+  type: NodePort
+  port: 8080
+  targetPort: 8080
+  nodePort: 30000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 5
+
+# ConfigMap data
+configMap:
+  enabled: true
+  data:
+    APP_ENV: "production"
+    LOG_LEVEL: "INFO"
+    APP_NAME: "Simple Java DevOps App"
+
+# Secrets (values should be base64 encoded or use external secrets)
+secrets:
+  enabled: false
+  data: {}
+  # API_KEY: "base64-encoded-value"
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+# fsGroup: 2000
+
+# Container security context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+# runAsUser: 1000

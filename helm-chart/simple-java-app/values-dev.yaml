@@ -1,0 +1,23 @@
+# Development environment specific values
+replicaCount: 1
+
+environment: development
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+configMap:
+  data:
+    APP_ENV: "development"
+    LOG_LEVEL: "DEBUG"
+
+service:
+  nodePort: 30001

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>App.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">DevOps Project</a> &gt; <a href="index.source.html" class="el_package">com.devops</a> &gt; <span class="el_source">App.java</span></div><h1>App.java</h1><pre class="source lang-java linenums">package com.devops;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
+<span class="nc" id="L18">public class App {</span>
+<span class="fc" id="L19">    private static final Logger logger = Logger.getLogger(App.class.getName());</span>
+<span class="fc" id="L20">    private static final Gson gson = new Gson();</span>
+<span class="fc" id="L21">    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+    public static void main(String[] args) throws IOException {
+<span class="nc" id="L24">        int port = Integer.parseInt(System.getenv().getOrDefault(&quot;APP_PORT&quot;, &quot;8080&quot;));</span>
+<span class="nc" id="L25">        String appName = System.getenv().getOrDefault(&quot;APP_NAME&quot;, &quot;Simple Java App&quot;);</span>
+
+<span class="nc" id="L27">        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);</span>
+
+        // Health check endpoint
+<span class="nc" id="L30">        server.createContext(&quot;/health&quot;, new HealthHandler());</span>
+
+        // Main endpoint
+<span class="nc" id="L33">        server.createContext(&quot;/&quot;, new RootHandler(appName));</span>
+
+        // Info endpoint
+<span class="nc" id="L36">        server.createContext(&quot;/info&quot;, new InfoHandler());</span>
+
+        // Metrics endpoint
+<span class="nc" id="L39">        server.createContext(&quot;/metrics&quot;, new MetricsHandler());</span>
+
+<span class="nc" id="L41">        server.setExecutor(null);</span>
+<span class="nc" id="L42">        server.start();</span>
+
+<span class="nc" id="L44">        logger.info(String.format(&quot;%s started on port %d&quot;, appName, port));</span>
+<span class="nc" id="L45">        logger.info(&quot;Available endpoints: /, /health, /info, /metrics&quot;);</span>
+<span class="nc" id="L46">    }</span>
+
+    static class RootHandler implements HttpHandler {
+        private final String appName;
+
+<span class="nc" id="L51">        RootHandler(String appName) {</span>
+<span class="nc" id="L52">            this.appName = appName;</span>
+<span class="nc" id="L53">        }</span>
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+<span class="nc" id="L57">            String response = String.format(</span>
+                    &quot;{\n&quot; +
+                            &quot;  \&quot;message\&quot;: \&quot;Hello from DevOps Pipeline!\&quot;,\n&quot; +
+                            &quot;  \&quot;appName\&quot;: \&quot;%s\&quot;,\n&quot; +
+                            &quot;  \&quot;status\&quot;: \&quot;running\&quot;,\n&quot; +
+                            &quot;  \&quot;timestamp\&quot;: \&quot;%s\&quot;,\n&quot; +
+                            &quot;  \&quot;version\&quot;: \&quot;1.0.0\&quot;\n&quot; +
+                            &quot;}&quot;,
+                    appName,
+<span class="nc" id="L66">                    LocalDateTime.now().format(formatter)</span>
+            );
+
+<span class="nc" id="L69">            exchange.getResponseHeaders().set(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L70">            exchange.sendResponseHeaders(200, response.getBytes().length);</span>
+<span class="nc" id="L71">            try (OutputStream os = exchange.getResponseBody()) {</span>
+<span class="nc" id="L72">                os.write(response.getBytes());</span>
+            }
+<span class="nc" id="L74">            logger.info(&quot;Root endpoint accessed&quot;);</span>
+<span class="nc" id="L75">        }</span>
+    }
+
+<span class="nc" id="L78">    static class HealthHandler implements HttpHandler {</span>
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+<span class="nc" id="L81">            JsonObject health = new JsonObject();</span>
+<span class="nc" id="L82">            health.addProperty(&quot;status&quot;, &quot;healthy&quot;);</span>
+<span class="nc" id="L83">            health.addProperty(&quot;timestamp&quot;, LocalDateTime.now().format(formatter));</span>
+
+<span class="nc" id="L85">            String response = gson.toJson(health);</span>
+<span class="nc" id="L86">            exchange.getResponseHeaders().set(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L87">            exchange.sendResponseHeaders(200, response.getBytes().length);</span>
+<span class="nc" id="L88">            try (OutputStream os = exchange.getResponseBody()) {</span>
+<span class="nc" id="L89">                os.write(response.getBytes());</span>
+            }
+<span class="nc" id="L91">        }</span>
+    }
+
+<span class="nc" id="L94">    static class InfoHandler implements HttpHandler {</span>
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+<span class="nc" id="L97">            Map&lt;String, Object&gt; info = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L98">            info.put(&quot;javaVersion&quot;, System.getProperty(&quot;java.version&quot;));</span>
+<span class="nc" id="L99">            info.put(&quot;osName&quot;, System.getProperty(&quot;os.name&quot;));</span>
+<span class="nc" id="L100">            info.put(&quot;osArch&quot;, System.getProperty(&quot;os.arch&quot;));</span>
+<span class="nc" id="L101">            info.put(&quot;availableProcessors&quot;, Runtime.getRuntime().availableProcessors());</span>
+<span class="nc" id="L102">            info.put(&quot;environment&quot;, System.getenv().getOrDefault(&quot;APP_ENV&quot;, &quot;development&quot;));</span>
+
+<span class="nc" id="L104">            String response = gson.toJson(info);</span>
+<span class="nc" id="L105">            exchange.getResponseHeaders().set(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L106">            exchange.sendResponseHeaders(200, response.getBytes().length);</span>
+<span class="nc" id="L107">            try (OutputStream os = exchange.getResponseBody()) {</span>
+<span class="nc" id="L108">                os.write(response.getBytes());</span>
+            }
+<span class="nc" id="L110">        }</span>
+    }
+
+<span class="nc" id="L113">    static class MetricsHandler implements HttpHandler {</span>
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+<span class="nc" id="L116">            Map&lt;String, Object&gt; metrics = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L117">            metrics.put(&quot;freeMemory&quot;, Runtime.getRuntime().freeMemory());</span>
+<span class="nc" id="L118">            metrics.put(&quot;totalMemory&quot;, Runtime.getRuntime().totalMemory());</span>
+<span class="nc" id="L119">            metrics.put(&quot;maxMemory&quot;, Runtime.getRuntime().maxMemory());</span>
+<span class="nc" id="L120">            metrics.put(&quot;availableProcessors&quot;, Runtime.getRuntime().availableProcessors());</span>
+
+<span class="nc" id="L122">            String response = gson.toJson(metrics);</span>
+<span class="nc" id="L123">            exchange.getResponseHeaders().set(&quot;Content-Type&quot;, &quot;application/json&quot;);</span>
+<span class="nc" id="L124">            exchange.sendResponseHeaders(200, response.getBytes().length);</span>
+<span class="nc" id="L125">            try (OutputStream os = exchange.getResponseBody()) {</span>
+<span class="nc" id="L126">                os.write(response.getBytes());</span>
+            }
+<span class="nc" id="L128">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

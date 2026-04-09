@@ -1,0 +1,5 @@
+com\devops\App$HealthHandler.class
+com\devops\App$InfoHandler.class
+com\devops\App$MetricsHandler.class
+com\devops\App.class
+com\devops\App$RootHandler.class
